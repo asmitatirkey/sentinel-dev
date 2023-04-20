@@ -10,14 +10,33 @@ terraform {
 provider "aws" {
   # Configuration options
 }
-resource "aws_rds_cluster" "default" {
-  cluster_identifier      = "aurora-cluster-demo"
-  engine                  = "aurora-mysql"
-  engine_version          = "5.7.mysql_aurora.2.03.2"
-  availability_zones      = ["us-west-2a", "us-west-2b", "us-west-2c"]
-  database_name           = "mydb"
-  master_username         = "foo"
-  master_password         = "bar"
-  backup_retention_period = 5
-  preferred_backup_window = "07:00-09:00"
+resource "aws_lb" "test" {
+  name               = "test-lb-tf"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.lb_sg.id]
+  subnets            = [for subnet in aws_subnet.public : subnet.id]
+
+   tags = {
+    Environment = "production"
+  }
+}
+resource "aws_lb" "front_end" {
+  # ...
+}
+
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.front_end.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
 }
