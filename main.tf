@@ -8,35 +8,70 @@ terraform {
 }
 
 provider "aws" {
-  # Configuration options
+  region = "us-east-1"
+  access_key = "AKIA4VIPZL3PS7MQGP4K"
+  secret_key = "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"
 }
-resource "aws_lb" "test" {
-  name               = "test-lb-tf"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.lb_sg.id]
-  subnets            = [for subnet in aws_subnet.public : subnet.id]
+resource "aws_vpc" "example_vpc" {
+  cidr_block = "10.0.0.0/16" # Replace with your preferred CIDR block
+}
 
-   tags = {
-    Environment = "production"
+resource "aws_subnet" "example_subnet_1" {
+  vpc_id     = aws_vpc.example_vpc.id
+  cidr_block = "10.0.1.0/24" # Replace with your preferred CIDR block
+}
+
+resource "aws_subnet" "example_subnet_2" {
+  vpc_id     = aws_vpc.example_vpc.id
+  cidr_block = "10.0.2.0/24" # Replace with your preferred CIDR block
+}
+resource "aws_security_group" "example_alb_sg" {
+  name_prefix = "example-alb-sg-"
+
+  ingress {
+    from_port   = 80 # Replace with your desired port
+    to_port     = 80 # Replace with your desired port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Replace with your desired source IP range(s)
   }
 }
-resource "aws_lb" "front_end" {
-  # ...
+resource "aws_lb" "application_load_balancer" {
+  name               = "alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.example_alb_sg.id]
+  subnets            = [aws_subnet.example_subnet_1.id, aws_subnet.example_subnet_2.id]
+  
+  tags   = {
+    Name = "test"
+  }
 }
 
-resource "aws_lb_listener" "front_end" {
-  load_balancer_arn = aws_lb.front_end.arn
-  port              = "80"
-  protocol          = "HTTP"
+# create target group
+resource "aws_lb_target_group" "application_load_balancer" {
+  name        = "example-target-group"
+  target_type = "instance"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.example_vpc.id
+
+  }
+
+# create a listener on port 80 with redirect action
+resource "aws_lb_listener" "application_load_balancer" {
+  load_balancer_arn = aws_lb.application_load_balancer.arn
+  port              =  80
+  protocol          = "HTTP" 
 
   default_action {
     type = "redirect"
 
     redirect {
-      port        = "443"
+      port        = 443
       protocol    = "HTTPS"
       status_code = "HTTP_301"
     }
   }
 }
+
+# create a listener on port 443 with forward action
