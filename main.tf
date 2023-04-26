@@ -64,13 +64,13 @@ resource "aws_lb_listener" "application_load_balancer" {
   protocol          = "HTTP" 
 
   default_action {
-    type = "redirect"
+    type = "forward"
 
-    redirect {
-      port        = 443
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
+#     redirect {
+#       port        = 443
+#       protocol    = "HTTPS"
+#       status_code = "HTTP_301"
+#     }
   }
 }
 
